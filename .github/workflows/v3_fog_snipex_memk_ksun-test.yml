@@ -1,11 +1,11 @@
-name: fog_snipex_memk_v3_ksun_test
+name: fog_snipex_memk_v3_ksun
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: build v3_fog_snipex_memk_ksun_test
+    name: build v3_fog_snipex_memk_ksun
     runs-on: ubuntu-22.04
 
     steps:
@@ -30,7 +30,7 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
 
       - name: Verify KernelSU-Next submodule
-      run: |
+        run: |
           set -e
 
           echo "=== Submodule status ==="
