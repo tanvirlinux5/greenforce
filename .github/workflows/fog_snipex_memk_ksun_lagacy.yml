@@ -1,11 +1,11 @@
-name: fog_snipex_memk_ksun_lagacy
+name: v2_fog_snipex_memk_ksun_lagacy
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: fog_snipex_memk_ksun_lagacy
+    name: v2_fog_snipex_memk_ksun_lagacy
     runs-on: ubuntu-22.04
 
     steps:
@@ -131,6 +131,22 @@ jobs:
             STRIP=llvm-strip \
             vendor/fog-perf_defconfig
 
+          scripts/config --file out/.config \
+            --enable MODULES \
+            --enable MODULE_FORCE_LOAD \
+            --enable MODULE_UNLOAD \
+            --enable MODULE_FORCE_UNLOAD \
+            --enable MODVERSIONS \
+            --disable MODULE_SIG \
+            --disable MODULE_SIG_FORCE \
+            --disable MODULE_SIG_ALL \
+            --disable MODULE_SIG_SHA512
+
+          make O=out ARCH=arm64 olddefconfig
+
+          echo "=== FINAL MODULE CONFIG ==="
+          grep -E '^CONFIG_MODULES=|^CONFIG_MODULE_FORCE|^CONFIG_MODVERSIONS=|^CONFIG_MODULE_SIG' out/.config || true
+
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
             CC=clang \
@@ -143,7 +159,7 @@ jobs:
             OBJDUMP=llvm-objdump \
             STRIP=llvm-strip \
             Image.gz
-
+            
       - name: Build MemKernel module
         run: |
           set -e
@@ -181,7 +197,7 @@ jobs:
       - name: Upload Kernel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fog_snipex_memk_ksun_lagacy
+          name: fog_snipex_memk_ksun_lagacy_v2
           path: |
             out/arch/arm64/boot/Image.gz
             out/drivers/memkernel/fog_snipex_memk.ko
