@@ -1,11 +1,11 @@
-name: fog_snipex_memk_v3_ksun
+name: fog_snipex_memk_v3_ksun_test
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: build v3_fog_snipex_memk_ksun
+    name: build v3_fog_snipex_memk_ksun_test
     runs-on: ubuntu-22.04
 
     steps:
