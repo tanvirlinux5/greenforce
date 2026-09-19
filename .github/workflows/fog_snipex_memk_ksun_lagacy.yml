@@ -31,11 +31,11 @@ jobs:
 
           cd KernelSU-Next
 
-          git fetch origin legacy
-          git checkout -B legacy origin/legacy
+          git fetch --tags
+          git checkout v3.2.0-legacy
 
-          echo "=== KernelSU-Next branch ==="
-          git branch --show-current
+          echo "=== KernelSU-Next ref ==="
+          git describe --tags --always
 
           echo "=== KernelSU-Next commit ==="
           git log -1 --oneline
