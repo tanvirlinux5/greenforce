@@ -1,0 +1,79 @@
+name: fog_snipex_memk_v2_ksun
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build fog_snipex_memk_ksun
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up MemKernel as a module (M-OUT) with specified name
+        run: |
+          curl -LSs "https://raw.githubusercontent.com//tanvirlinux5/MemKernel/main/kernel/setup.sh" | bash -s M fog_snipex_memk
+
+      - name: Set up Ksu next
+        run: |
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
+          
+      - name: Setup Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex \
+            git gnupg gperf libelf-dev libncurses5-dev libssl-dev lzop make \
+            optipng pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev libtinfo5
+
+      - name: Download Proton Clang 13
+        run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+
+      - name: Build Kernel Image.gz
+        run: |
+          export PATH="${GITHUB_WORKSPACE}/clang/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+
+          # Defconfig Load (fog_new এর আসল ফাইলের নাম নিশ্চিত করুন)
+          make O=out ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            vendor/fog-perf_defconfig
+
+          # Compile Only Image.gz with ThinLTO support
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            Image.gz
+
+      - name: Upload Kernel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fog_snipex_memk_v_ksun2-Image.gz
+          path: |
+            artifact/Image.gz
+            artifact/fog_snipex_memk_v2.ko
+          if-no-files-found: error
+          retention-days: 14
+          
