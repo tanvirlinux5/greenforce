@@ -131,22 +131,6 @@ jobs:
             STRIP=llvm-strip \
             vendor/fog-perf_defconfig
 
-          scripts/config --file out/.config \
-            --enable MODULES \
-            --enable MODULE_FORCE_LOAD \
-            --enable MODULE_UNLOAD \
-            --enable MODULE_FORCE_UNLOAD \
-            --enable MODVERSIONS \
-            --disable MODULE_SIG \
-            --disable MODULE_SIG_FORCE \
-            --disable MODULE_SIG_ALL \
-            --disable MODULE_SIG_SHA512
-
-          make O=out ARCH=arm64 olddefconfig
-
-          echo "=== FINAL MODULE CONFIG ==="
-          grep -E '^CONFIG_MODULES=|^CONFIG_MODULE_FORCE|^CONFIG_MODVERSIONS=|^CONFIG_MODULE_SIG' out/.config || true
-
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
             CC=clang \
