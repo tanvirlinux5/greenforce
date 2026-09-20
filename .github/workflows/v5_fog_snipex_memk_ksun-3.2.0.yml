@@ -29,7 +29,7 @@ jobs:
 #        run: |
 #          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
 
-      - name: Checkout KernelSU-Next Legacy
+      - name: Checkout KernelSU-Next v3.3.0
         run: |
           set -e
 
@@ -80,7 +80,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
  
-           - name: Diagnose KSU hook mismatch
+      - name: Diagnose KSU hook mismatch
         run: |
           echo "=== KSU CONFIG ==="
           grep -E '^CONFIG_(KSU|KPROBE)' arch/arm64/configs/vendor/fog-perf_defconfig || true
@@ -94,7 +94,6 @@ jobs:
           grep -Rnw \
             "ksu_vfs_read_hook\|ksu_handle_vfs_read\|ksu_execveat_hook" \
             fs kernel || true
-
 
       - name: Build Kernel Image.gz
         run: |
@@ -166,7 +165,7 @@ jobs:
       - name: Upload Kernel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fog_snipex_memk_v5_ksun_3.2.0
+          name: name: fog_snipex_memk_v5_ksun_3.3.0
           path: |
             out/arch/arm64/boot/Image.gz
             out/drivers/memkernel/fog_snipex_memk.ko
