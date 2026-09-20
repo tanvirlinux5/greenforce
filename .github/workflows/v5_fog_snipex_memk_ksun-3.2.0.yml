@@ -79,7 +79,7 @@ jobs:
       - name: Download Proton Clang 13
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
- 
+
       - name: Diagnose KSU hook mismatch
         run: |
           echo "=== KSU CONFIG ==="
@@ -165,7 +165,7 @@ jobs:
       - name: Upload Kernel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: name: fog_snipex_memk_v5_ksun_3.3.0
+          name: fog_snipex_memk_v5_ksun_3.3.0
           path: |
             out/arch/arm64/boot/Image.gz
             out/drivers/memkernel/fog_snipex_memk.ko
