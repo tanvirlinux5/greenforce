@@ -1,0 +1,173 @@
+name: fog_snipex_memk_v5_ksun
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build v5_fog_snipex_memk_ksun
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Set up MemKernel as a module (M-OUT) with specified name
+        run: |
+          curl -LSs "https://raw.githubusercontent.com/tanvirlinux5/MemKernel/main/kernel/setup.sh" | bash -s M fog_snipex
+
+      - name: Fix MemKernel mmap_lock API
+        run: |
+          sed -i 's/->mmap_sem/->mmap_lock/g' \
+            drivers/memkernel/memory.c \
+            drivers/memkernel/process.c
+            
+#      - name: Set up Ksu next
+#        run: |
+#          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
+
+      - name: Checkout KernelSU-Next v3.2.0
+        run: |
+          set -e
+
+          cd KernelSU-Next
+
+          git fetch --tags
+          git checkout v3.2.0
+
+          echo "=== KernelSU-Next ref ==="
+          git describe --tags --always
+
+          echo "=== KernelSU-Next commit ==="
+          git log -1 --oneline
+          
+
+
+      - name: Verify KernelSU-Next submodule
+        run: |
+          set -e
+
+          echo "=== Submodule status ==="
+          git submodule status
+
+          echo "=== KernelSU-Next ==="
+          test -f KernelSU-Next/kernel/Kconfig
+          test -f KernelSU-Next/kernel/Makefile
+          echo "KernelSU-Next source: OK"
+
+          echo "=== drivers/kernelsu ==="
+          ls -ld drivers/kernelsu
+          echo "Target:"
+          readlink drivers/kernelsu
+
+          echo "=== KSU Kconfig ==="
+          grep -n "drivers/kernelsu/Kconfig" drivers/Kconfig
+
+          echo "=== KSU Makefile ==="
+          grep -n "CONFIG_KSU" drivers/Makefile || true
+
+      - name: Setup Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex \
+            git gnupg gperf libelf-dev libncurses5-dev libssl-dev lzop make \
+            optipng pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev libtinfo5
+
+      - name: Download Proton Clang 13
+        run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+
+      - name: Diagnose KSU hook mismatch
+        run: |
+          echo "=== KSU CONFIG ==="
+          grep -E '^CONFIG_(KSU|KPROBE)' arch/arm64/configs/vendor/fog-perf_defconfig || true
+
+          echo "=== KSU symbol definitions ==="
+          grep -Rnw \
+            "ksu_vfs_read_hook\|ksu_handle_vfs_read\|ksu_execveat_hook" \
+            KernelSU-Next/kernel || true
+
+          echo "=== Kernel symbol call sites ==="
+          grep -Rnw \
+            "ksu_vfs_read_hook\|ksu_handle_vfs_read\|ksu_execveat_hook" \
+            fs kernel || true
+
+      - name: Build Kernel Image.gz
+        run: |
+          set -e
+
+          export PATH="${GITHUB_WORKSPACE}/clang/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+
+          make O=out ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            vendor/fog-perf_defconfig
+
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            Image.gz
+
+      - name: Build MemKernel module
+        run: |
+          set -e
+
+          export PATH="${GITHUB_WORKSPACE}/clang/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            M=drivers/memkernel modules
+
+      - name: Verify build outputs
+        run: |
+          set -e
+
+          test -s out/arch/arm64/boot/Image.gz
+          test -s out/drivers/memkernel/fog_snipex_memk.ko
+
+          echo "=== Image.gz ==="
+          ls -lh out/arch/arm64/boot/Image.gz
+
+          echo "=== MemKernel module ==="
+          ls -lh out/drivers/memkernel/fog_snipex_memk.ko
+
+      - name: Upload Kernel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fog_snipex_memk_v5_ksun_v3.2.0
+          path: |
+            out/arch/arm64/boot/Image.gz
+            out/drivers/memkernel/fog_snipex_memk.ko
+          if-no-files-found: error
+          retention-days: 14
